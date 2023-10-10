@@ -6,11 +6,17 @@ import Card from "@/components/atoms/Card";
 import Button from "@/components/atoms/Button";
 import Loader from "@/components/atoms/Loader";
 
+
+interface Props {
+  localPage: number
+}
+
 interface People {
   previous: string;
   next: string;
   count: string;
   results: Results;
+  localPageSt: number;
 }
 
 interface Results {
@@ -20,26 +26,54 @@ interface Results {
 
 const defaultResults: Results[] = [];
 
-const People = () => {
+const People = (props: Props) => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Results[]>(defaultResults);
-  const PageRef = useRef<number>(0);
+  const [disableButtonNext, setDisableButtonNext] = useState(false);
+  const [disableButtonBack, setDisableButtonBack] = useState(false);
+  const PageRef = useRef<number>(1);
+  const {localPage = localStorage.getItem("page")} = props
+  console.log("page", PageRef)
+  console.log("page priemera", localPage)
 
   const fetchPeople = async () => {
     const { data } = await peopleService();
+    localStorage.setItem("page", JSON.stringify(PageRef.current));
     if (data.results.length > 0) {
       setResults(data.results);
       setLoading(false);
-      PageRef.current++;
+    }
+    if (data.previous === null) {
+      setDisableButtonBack(true);
     }
   };
 
-
   const fetchPeoplePage = async () => {
+    const localPage = localStorage.getItem("page");
+    const localPageSt = parseInt(localPage);
+    console.log("localPageSt", localPageSt);
+    console.log("typeof localPageSt", typeof localPageSt);  
+    const { data } = await peopleServicePage(localPageSt);    
+    localStorage.setItem("page", JSON.stringify(PageRef.current));
+    if (data.results.length > 0) {
+      setResults(data.results);
+      setLoading(false);
+    }
+    if (data.previous === null) {
+      setDisableButtonBack(true);
+    }
+
+    return localPageSt
+  };  
+
+
+  const fetchPeoplePageNext = async () => {  
+    PageRef.current++;
     setLoading(true);
     const { data } = await peopleServicePage(PageRef.current);
-    PageRef.current++;
     setResults(data.results);
+    setDisableButtonBack(false);
+    localStorage.setItem("page", JSON.stringify(PageRef.current));  
     if (data.results.length > 0) {
       setResults(data.results);
       setLoading(false);
@@ -47,14 +81,50 @@ const People = () => {
     if (data.next === null) {
       setLoading(false);
       setResults(data.results);
-      alert("ho hay más resultados");
+      setDisableButtonNext(true);
     }
   };
 
+  const fetchPeoplePageBack = async () => {   
+    PageRef.current--;
+    setLoading(true);
+    const { data } = await peopleServicePage(PageRef.current);
+    setResults(data.results);
+        localStorage.setItem("page", JSON.stringify(PageRef.current)); 
+    if (data.results.length > 0) {
+      setResults(data.results);
+      setLoading(false);
+    }
+    if (data.previous === null) {
+      setLoading(false);
+      setResults(data.results);
+      setDisableButtonBack(true);
+    }
+    if (data.next !== null) {
+      setDisableButtonNext(false);
+    }    
+  };
+
+
+
+
   useEffect(() => {
+    const localPage = localStorage.getItem("page");
+    console.log(localPage);
+    console.log(typeof localPage);
+
     try {
-      fetchPeople();
-      setLoading(true);
+      if (localPage === "1") {
+        alert("entro igual a 1");
+        fetchPeople();
+        setLoading(true);
+      } 
+      if (localPage !== "1") {
+        alert("entro dsityinto de 1");
+        fetchPeoplePage();
+        setLoading(true);
+      }      
+         
     } catch (error) {
       console.log(error);
       setLoading(false);
@@ -62,6 +132,9 @@ const People = () => {
   }, []);
 
   return (
+
+
+
     <Container>
       {loading && (
         <ContainerLoad>
@@ -73,7 +146,7 @@ const People = () => {
         {!!results?.length && (
           <>
             {results.map((item) => {
-              const { name, homeworld } = item;
+              const { name, homeworld} = item;
               return (
                   <Card key={name} name={name} homeworld={homeworld}/>
               );
@@ -86,7 +159,8 @@ const People = () => {
         <Button
           type="button"
           variant="contained"
-          onClick={""}
+          onClick={fetchPeoplePageBack}
+          disabled={disableButtonBack}
           style={{
             width: "8%",
             margin: 10,
@@ -94,10 +168,12 @@ const People = () => {
         >
           Anterior
         </Button>
+        <div style={{ padding: '10px 30px'  }}>Página {localPage}</div>
         <Button
           type="button"
           variant="contained"
-          onClick={fetchPeoplePage}
+          onClick={fetchPeoplePageNext}
+          disabled={disableButtonNext}
           style={{
             width: "8%",
             margin: 10,

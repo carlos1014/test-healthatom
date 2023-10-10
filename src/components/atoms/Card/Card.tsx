@@ -1,10 +1,12 @@
 import { Container, ContainerBtnInfo } from "./Card.style";
 import Button from "@/components/atoms/Button";
+import {Planet} from "@/components/molecules/Planet";
 import { planetsService } from "@/services/data.services";
 
 interface Card {
   name: string;
   homeworld: string;
+  namePlanet: string
 }
 
 
@@ -12,10 +14,12 @@ const Card = (props: Card) => {
   const fetchPlanets = async () => {
     const { data } = await planetsService(homeworld);
     if (data) {
-      console.log(data.name)
+      console.log(data.name);
+      const namePlanet = data.name;
+      return namePlanet
     }
   };
-  const { name, homeworld } = props;
+  const { name, homeworld, namePlanet } = props;
   return (
     <Container>
       <div style={{ width: '70%'  }}>
@@ -44,8 +48,8 @@ const Card = (props: Card) => {
         >
           FAVORITOS
         </Button>
+        <Planet namePlanet={namePlanet}></Planet>
       </ContainerBtnInfo>
-
     </Container>
   );
 };
